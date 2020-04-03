@@ -25,6 +25,36 @@ def download_covid_dataset(file_name='covid_19_latest.csv',
         print(f'Failed to download dataset from {url} due to {e}')
 
 
+def filter_by_country(country):
+    """Retrieve data for a country"""
+    loaded_data = pd.read_csv('covid_19_latest.csv')
+    data = loaded_data[loaded_data.countriesAndTerritories == country]
+    return data
+
+
+def graph_deaths_for_country(country):
+    data = filter_by_country(country)
+
+    return html.Div(children=[
+        html.H1(
+            children='Hello Dash',
+            style={
+                'textAlign': 'center',
+                'color': 'white',
+            }
+        ),
+        dcc.Graph(
+             figure={
+                 'data': [{'x': list(reversed(list(data['dateRep']))),
+                           'y': list(reversed([int(count) for count in data['deaths']])), 'type': 'bar', 'name': country}]
+             }
+            )])
+
+
+#
+# 'data': [
+#     {'x': [1, 2, 3], 'y': [4, 1, 2], 'type': 'bar', 'name': 'SF'},
+
 def create_app():
     """
     Create the Dash application
@@ -71,6 +101,8 @@ def create_app():
                 }
             }
         ),
+
+        graph_deaths_for_country('Poland'),
 
     html.Div([
         dcc.Graph(
