@@ -1,67 +1,14 @@
+import plotly.graph_objects as go
 import dash
+from dash.dependencies import Input, Output
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_table
 import pandas as pd
 from requests import get
 from requests.exceptions import HTTPError
-from dash.dependencies import Input, Output
 
-
-def drop_down_list():
-    """
-    Build drop down with all available countries
-    :return:
-    """
-    list_of_countries = sorted(list(set(pd.read_csv('covid_19_latest.csv')['countriesAndTerritories'])))
-
-    return dcc.Dropdown(
-        id='country_list',
-        options=[{'label': country, 'value': country} for country in list_of_countries],
-        value=list_of_countries[0]
-    )
-
-
-def filter_by_country(country):
-    """Retrieve data for a country"""
-    loaded_data = pd.read_csv('covid_19_latest.csv')
-    data = loaded_data[loaded_data.countriesAndTerritories == country]
-    return data
-
-
-def graph_deaths_for_country(country):
-    data = filter_by_country(country)
-
-    return html.Div(children=[
-        html.H1(
-            id='daily_total_header',
-            children=f'Daily Deaths: {country}',
-            style={
-                'textAlign': 'center',
-                'color': 'white',
-            }
-        ),
-        drop_down_list(),
-        dcc.Graph(id='deaths_per_day',
-                  figure={
-                      'data': [{'x': list(reversed(list(data['dateRep']))),
-                                'y': list(reversed([int(count) for count in data['deaths']])), 'type': 'bar',
-                                'name': country}]
-                  })
-    ])
-
-
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
-colors = {
-    'background': '#111111',
-    'text': '#7FDBFF'
-}
-
-app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
-    graph_deaths_for_country('Germany'),
-])
+# Helper functions #
 
 
 def download_covid_dataset(file_name='covid_19_latest.csv',
@@ -83,39 +30,120 @@ def download_covid_dataset(file_name='covid_19_latest.csv',
         print(f'Failed to download dataset from {url} due to {e}')
 
 
-def example_graph():
-    df = pd.read_csv(
-        'https://gist.githubusercontent.com/chriddyp/5d1ea79569ed194d432e56108a04d188/raw/a9f9e8076b837d541398e999dcbac2b2826a81f8/gdp-life-exp-2007.csv')
+def generate_stats():
+    """
+    Generate basic stats DataFrame from covid 19 dataset
+    :return: Statistics DataFrame
+    """
+    data = pd.read_csv('covid_19_latest.csv')
+    stats_df = pd.DataFrame(columns=['country', 'total_cases', 'total_deaths', 'death_rate', 'geo_id'])
+    for country in data.countriesAndTerritories.unique():
+        country_df = data[data['countriesAndTerritories'] == country]
+        total_cases = country_df.cases.sum()
+        total_deaths = country_df.deaths.sum()
+        deaths_per_population = total_deaths/float(total_cases)
+        stats_df = stats_df.append({'country': country, 'total_cases': total_cases, 'total_deaths': total_deaths,
+                              'death_rate': round(deaths_per_population, 4), 'geo_id': country_df['countryterritoryCode'].unique()[0]}, ignore_index=True)
 
-    return html.Div([
-        dcc.Graph(
-            id='daily_deaths',
-            figure={
-                'data': [
-                    dict(
-                        x=df[df['continent'] == i]['gdp per capita'],
-                        y=df[df['continent'] == i]['life expectancy'],
-                        text=df[df['continent'] == i]['country'],
-                        mode='markers',
-                        opacity=0.7,
-                        marker={
-                            'size': 15,
-                            'line': {'width': 0.5, 'color': 'white'}
-                        },
-                        name=i
-                    ) for i in df.continent.unique()
-                ],
-                'layout': dict(
-                    xaxis={'type': 'log', 'title': 'GDP Per Capita'},
-                    yaxis={'title': 'Life Expectancy'},
-                    margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
-                    legend={'x': 0, 'y': 1},
-                    hovermode='closest'
-                )
+    return stats_df
+
+
+def filter_by_country(country):
+    """Retrieve data for a country"""
+    loaded_data = pd.read_csv('covid_19_latest.csv')
+    data = loaded_data[loaded_data.countriesAndTerritories == country]
+    return data
+
+# Custom Dash components #
+
+
+def drop_down_list(default):
+    """
+    Build drop down with all available countries
+    """
+    list_of_countries = sorted(list(set(pd.read_csv('covid_19_latest.csv')['countriesAndTerritories'])))
+
+    return dcc.Dropdown(
+        id='country_list',
+        options=[{'label': country, 'value': country} for country in list_of_countries],
+        value=default
+    )
+
+
+def graph_deaths_for_country(country):
+    data = filter_by_country(country)
+
+    return html.Div(children=[
+        html.H1(
+            id='daily_total_header',
+            children=f'Daily Deaths: {country}',
+            style={
+                'textAlign': 'center',
+                'color': 'black',
             }
-        )
+        ),
+        drop_down_list('Germany'),
+        dcc.Graph(id='deaths_per_day',
+                  figure={
+                      'data': [{'x': list(reversed(list(data['dateRep']))),
+                                'y': list(reversed([int(count) for count in data['deaths']])), 'type': 'bar',
+                                'name': country}],
+                      'layout': dict(xaxis={'title': 'Date'}, yaxis={'title': 'Deaths'})
+                  },
+                  )
     ])
 
+
+def stats_table(stats_df):
+    """
+    Build stats table
+    :param stats_df:
+    :return:
+    """
+
+    return html.Div(style={'width': '75%', 'margin': 'auto', 'padding': '24px'},
+                    children=[html.H2('Statistics Table:'),
+                              dash_table.DataTable(
+                                  id='stats_table',
+                                  sort_action="native",
+                                  columns=[{"name": i.upper(), "id": i} for i in stats_df.columns],
+                                  data=stats_df.to_dict('records'),
+                                  style_cell={'textAlign': 'left'})])
+
+
+def world_map(stats_df):
+
+    fig = go.Figure(data=go.Choropleth(
+
+        locations=stats_df['geo_id'], # Spatial coordinates
+        z=stats_df['total_deaths'], # Data to be color-coded
+        colorscale='Reds',
+        colorbar_title="Total Deaths",
+    ))
+    fig.update_layout(title='Total Deaths', title_x=0.5, title_y=0.9)
+    return html.Div(children=dcc.Graph(figure=fig, style={'height': '800px', 'width': '70%', 'margin': 'auto'}))
+
+
+# Main Dashboard Creation#
+
+download_covid_dataset()
+stats = generate_stats()
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+
+colors = {
+    'background': 'white',
+    'text': 'black'
+}
+
+app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
+    graph_deaths_for_country('Germany'),
+    world_map(stats),
+    stats_table(stats)
+
+])
+
+# Register Callbacks
 
 @app.callback([Output('deaths_per_day', 'figure'), Output('daily_total_header', 'children')],
               [Input('country_list', 'value')])
@@ -124,11 +152,11 @@ def update_daily_deaths_graph(country):
 
     return [{
         'data': [{'x': list(reversed(list(data['dateRep']))),
-                  'y': list(reversed([int(count) for count in data['deaths']])), 'type': 'bar', 'name': country}]},
+                  'y': list(reversed([int(count) for count in data['deaths']])), 'type': 'bar', 'name': country}],
+        'layout': dict(xaxis={'title': 'Date'})
+    },
         f'Daily Deaths: {country}']
 
 
 if __name__ == '__main__':
-    print('Downloading latest Covid-19 figures.')
-    download_covid_dataset()
     app.run_server(debug=True)
