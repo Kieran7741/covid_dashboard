@@ -85,10 +85,10 @@ def graph_cases_deaths_for_country(country):
         drop_down_list(country),
         dcc.Graph(id='cases_deaths_per_day',
                   figure={
-                      'data': [{'x': list(reversed(list(data['dateRep']))),
+                      'data': [{'x': list(reversed(list(data['dateRep'][:-50]))),
                                 'y': list(reversed([int(count) for count in data['cases'][:-50]])), 'type': 'bar',
                                 'name': 'Cases'},
-                               {'x': list(reversed(list(data['dateRep']))),
+                               {'x': list(reversed(list(data['dateRep'][:-50]))),
                                 'y': list(reversed([int(count) for count in data['deaths'][:-50]])), 'type': 'bar',
                                 'marker': {'color': 'red'}, 'name': 'Deaths'}
                                ],
@@ -126,7 +126,7 @@ def world_map_deaths(stats_df):
         colorscale='Reds'
     ))
     fig.update_layout(title='Global Deaths', title_x=0.5, title_y=0.9)
-    return html.Div(children=dcc.Graph(figure=fig, style={'height': '800px', 'width': '70%', 'margin': 'auto'}))
+    return html.Div(children=dcc.Graph(figure=fig, style={'height': '700px', 'width': '70%', 'margin': 'auto'}))
 
 
 def world_map_cases(stats_df):
@@ -140,7 +140,7 @@ def world_map_cases(stats_df):
         colorscale='Blues'
     ))
     fig.update_layout(title='Global Cases', title_x=0.5, title_y=0.9)
-    return html.Div(children=dcc.Graph(figure=fig, style={'height': '800px', 'width': '70%', 'margin': 'auto'}))
+    return html.Div(children=dcc.Graph(figure=fig, style={'height': '700px', 'width': '70%', 'margin': 'auto'}))
 
 
 # Main Dashboard Creation#
@@ -171,9 +171,9 @@ def update_daily_deaths_graph(country):
 
     return [
         {
-            'data': [{'x': list(reversed(list(data['dateRep']))),
+            'data': [{'x': list(reversed(list(data['dateRep'][:-50]))),
                       'y': list(reversed([int(count) for count in data['cases'][:-50]])), 'type': 'bar', 'name': 'Cases'},
-                     {'x': list(reversed(list(data['dateRep']))),
+                     {'x': list(reversed(list(data['dateRep'][:-50]))),
                       'y': list(reversed([int(count)for count in data['deaths'][:-50]])), 'type': 'bar',
                       'marker': {'color': 'red'}, 'name': 'Deaths'}
                      ],
