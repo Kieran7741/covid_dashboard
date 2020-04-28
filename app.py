@@ -70,25 +70,29 @@ def drop_down_list(default):
     )
 
 
-def graph_deaths_for_country(country):
+def graph_cases_deaths_for_country(country):
     data = filter_by_country(country)
 
     return html.Div(children=[
         html.H1(
             id='daily_total_header',
-            children=f'Daily Deaths: {country}',
+            children=f'Daily Figures: {country}',
             style={
                 'textAlign': 'center',
                 'color': 'black',
             }
         ),
-        drop_down_list('Germany'),
-        dcc.Graph(id='deaths_per_day',
+        drop_down_list(country),
+        dcc.Graph(id='cases_deaths_per_day',
                   figure={
                       'data': [{'x': list(reversed(list(data['dateRep']))),
-                                'y': list(reversed([int(count) for count in data['deaths']])), 'type': 'bar',
-                                'name': country}],
-                      'layout': dict(xaxis={'title': 'Date'}, yaxis={'title': 'Deaths'})
+                                'y': list(reversed([int(count) for count in data['cases'][:-50]])), 'type': 'bar',
+                                'name': 'Cases'},
+                               {'x': list(reversed(list(data['dateRep']))),
+                                'y': list(reversed([int(count) for count in data['deaths'][:-50]])), 'type': 'bar',
+                                'marker': {'color': 'red'}, 'name': 'Deaths'}
+                               ],
+                      'layout': {'xaxis': {'title': 'Date', 'tickangle': 45}, 'yaxis': {'title': 'Cases'}, 'title': 'Cases per day'}
                   },
                   )
     ])
@@ -111,16 +115,31 @@ def stats_table(stats_df):
                                   style_cell={'textAlign': 'left'})])
 
 
-def world_map(stats_df):
-
+def world_map_deaths(stats_df):
+    """
+    World map displaying total deaths
+    :param stats_df: Dataframe containing info to be plotted
+    """
     fig = go.Figure(data=go.Choropleth(
-
-        locations=stats_df['geo_id'], # Spatial coordinates
-        z=stats_df['total_deaths'], # Data to be color-coded
-        colorscale='Reds',
-        colorbar_title="Total Deaths",
+        locations=stats_df['geo_id'],  # Spatial coordinates
+        z=stats_df['total_deaths'],  # Data to be color-coded
+        colorscale='Reds'
     ))
-    fig.update_layout(title='Total Deaths', title_x=0.5, title_y=0.9)
+    fig.update_layout(title='Global Deaths', title_x=0.5, title_y=0.9)
+    return html.Div(children=dcc.Graph(figure=fig, style={'height': '800px', 'width': '70%', 'margin': 'auto'}))
+
+
+def world_map_cases(stats_df):
+    """
+    World map displaying total deaths
+    :param stats_df: Dataframe containing info to be plotted
+    """
+    fig = go.Figure(data=go.Choropleth(
+        locations=stats_df['geo_id'],  # Spatial coordinates
+        z=stats_df['total_cases'],  # Data to be color-coded
+        colorscale='Blues'
+    ))
+    fig.update_layout(title='Global Cases', title_x=0.5, title_y=0.9)
     return html.Div(children=dcc.Graph(figure=fig, style={'height': '800px', 'width': '70%', 'margin': 'auto'}))
 
 
@@ -137,25 +156,30 @@ colors = {
 }
 
 app.layout = html.Div(style={'backgroundColor': colors['background']}, children=[
-    graph_deaths_for_country('Germany'),
-    world_map(stats),
+    graph_cases_deaths_for_country('Germany'),
+    world_map_cases(stats),
+    world_map_deaths(stats),
+
     stats_table(stats)
 
 ])
 
-# Register Callbacks
 
-@app.callback([Output('deaths_per_day', 'figure'), Output('daily_total_header', 'children')],
-              [Input('country_list', 'value')])
+@app.callback([Output('cases_deaths_per_day', 'figure'), Output('daily_total_header', 'children')],[Input('country_list', 'value')])
 def update_daily_deaths_graph(country):
     data = filter_by_country(country)
 
-    return [{
-        'data': [{'x': list(reversed(list(data['dateRep']))),
-                  'y': list(reversed([int(count) for count in data['deaths']])), 'type': 'bar', 'name': country}],
-        'layout': dict(xaxis={'title': 'Date'})
-    },
-        f'Daily Deaths: {country}']
+    return [
+        {
+            'data': [{'x': list(reversed(list(data['dateRep']))),
+                      'y': list(reversed([int(count) for count in data['cases'][:-50]])), 'type': 'bar', 'name': 'Cases'},
+                     {'x': list(reversed(list(data['dateRep']))),
+                      'y': list(reversed([int(count)for count in data['deaths'][:-50]])), 'type': 'bar',
+                      'marker': {'color': 'red'}, 'name': 'Deaths'}
+                     ],
+            'layout': {'xaxis': {'title': 'Date', 'tickangle': 45}, 'yaxis': {'title': 'Cases'}, 'title': 'Cases/Deaths per day'}
+        },
+        f'Daily Figures: {country}']
 
 
 if __name__ == '__main__':

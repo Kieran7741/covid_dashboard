@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
-
 def generate_stats():
     """
     Generate basic stats DataFrame from covid 19 dataset
