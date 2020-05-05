@@ -129,6 +129,20 @@ def world_map_deaths(stats_df):
     return html.Div(children=dcc.Graph(figure=fig, style={'height': '700px', 'width': '70%', 'margin': 'auto'}))
 
 
+def world_map_death_rate(stats_df):
+    """
+    World map displaying total deaths
+    :param stats_df: Dataframe containing info to be plotted
+    """
+    fig = go.Figure(data=go.Choropleth(
+        locations=stats_df['geo_id'],  # Spatial coordinates
+        z=stats_df['death_rate'],  # Data to be color-coded
+        colorscale='Reds'
+    ))
+    fig.update_layout(title='Global_death_rates', title_x=0.5, title_y=0.9)
+    return html.Div(children=dcc.Graph(figure=fig, style={'height': '700px', 'width': '70%', 'margin': 'auto'}))
+
+
 def world_map_cases(stats_df):
     """
     World map displaying total deaths

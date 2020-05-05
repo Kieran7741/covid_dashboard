@@ -14,6 +14,7 @@ def fetch_data_for_country(country):
     :param country:
     :return:
     """
+
     print(f'Fetching data for {country}')
     url = covid_api.format(country=country)
     request = requests.get(url)
@@ -35,7 +36,7 @@ def save_country_data_to_csv(data, file_name):
 if __name__ == '__main__':
     # Countries that border Germany
     countries = ['Germany', 'France', 'Netherlands', 'Switzerland', 'Austria',
-                 'Czech Republic', 'Denmark', 'Poland','Luxembourg', 'Belgium']
+                 'Czech_Republic', 'Denmark', 'Poland','Luxembourg', 'Belgium']
 
     for country in countries:
         data = fetch_data_for_country(country)
